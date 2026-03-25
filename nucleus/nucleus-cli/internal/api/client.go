@@ -46,7 +46,7 @@ func (c *NucleusClient) doRequest(method, path string, body interface{}) ([]byte
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 	if c.apiKey != "" {
-		req.Header.Set("X-API-Key", c.apiKey)
+		req.Header.Set("X-Nucleus-Key", c.apiKey)
 	}
 
 	resp, err := c.httpClient.Do(req)
@@ -69,6 +69,34 @@ func (c *NucleusClient) doRequest(method, path string, body interface{}) ([]byte
 	}
 
 	return respBody, nil
+}
+
+// PostRaw sends raw JSON bytes and returns the parsed data field
+func (c *NucleusClient) PostRaw(path string, jsonBody []byte) (interface{}, error) {
+	reqURL := c.apiURL + path
+	req, err := http.NewRequest("POST", reqURL, bytes.NewReader(jsonBody))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Nucleus-Key", c.apiKey)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	var apiResp struct {
+		Data  interface{} `json:"data"`
+		Error *string     `json:"error"`
+	}
+	json.Unmarshal(body, &apiResp)
+	if apiResp.Error != nil {
+		return nil, fmt.Errorf("%s", *apiResp.Error)
+	}
+	return apiResp.Data, nil
 }
 
 func (c *NucleusClient) GetExecutions(limit int, search, sessionID string) ([]Execution, error) {

@@ -14,6 +14,8 @@ type Execution struct {
 	Reversible  bool      `json:"reversible"`
 	DryRun      bool      `json:"dry_run"`
 	Explanation string    `json:"explanation"`
+	Warnings    []string  `json:"warnings"`
+	Suggestions []string  `json:"suggestions"`
 }
 
 type Context struct {

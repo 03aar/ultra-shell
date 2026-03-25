@@ -6,9 +6,11 @@ import { usePathname } from 'next/navigation';
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: '⬡' },
+  { href: '/ask', label: 'Ask', icon: '?' },
   { href: '/graph', label: 'Execution Graph', icon: '◈' },
   { href: '/sessions', label: 'Sessions', icon: '◉' },
   { href: '/context', label: 'Environment', icon: '◎' },
+  { href: '/skills', label: 'Skills', icon: '⚡' },
   { href: '/agent', label: 'Agent', icon: '◆' },
   { href: '/api-explorer', label: 'API Explorer', icon: '⬢' },
 ];

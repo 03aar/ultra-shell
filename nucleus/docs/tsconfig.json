@@ -1,0 +1,13 @@
+{
+  "extends": "@docusaurus/tsconfig",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "target": "ES2022",
+    "strict": true,
+    "skipLibCheck": true
+  },
+  "include": ["src/", "docs/", "docusaurus.config.ts", "sidebars.ts"]
+}

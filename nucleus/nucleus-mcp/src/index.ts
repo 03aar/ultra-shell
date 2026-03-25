@@ -474,6 +474,101 @@ server.tool(
   }
 );
 
+// @ts-ignore — MCP SDK deep type instantiation
+server.tool(
+  "natural_language_command",
+  "Convert a natural language description into a shell command and optionally execute it through Nucleus",
+  {
+    description: z.string().describe("Natural language description of what you want to do"),
+    execute: z.boolean().optional().describe("If true, execute the translated command (default false)"),
+  },
+  async ({ description, execute }) => {
+    try {
+      const translation = await client.translateNaturalLanguage(description);
+      const lines = [
+        `Query: ${description}`,
+        `Command: ${translation.command}`,
+        `Explanation: ${translation.explanation}`,
+        `Risk: ${translation.risk_level}`,
+      ];
+
+      if (execute) {
+        const result = await client.execute(translation.command, false);
+        lines.push("", "--- Execution Result ---");
+        lines.push(`Exit Code: ${result.exit_code}`);
+        if (result.stdout) lines.push("Stdout:", result.stdout);
+        if (result.stderr) lines.push("Stderr:", result.stderr);
+      }
+
+      return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+    } catch (err) {
+      return errorContent(err);
+    }
+  }
+);
+
+server.tool(
+  "explain_command",
+  "Explain what a shell command does in plain English, including side effects and risks",
+  {
+    command: z.string().describe("The shell command to explain"),
+  },
+  async ({ command }) => {
+    try {
+      const assessment = await client.getRiskAssessment(command);
+      const lines = [
+        `Command: ${command}`,
+        "",
+        `Risk Level: ${assessment.risk_level}`,
+        `Risk Score: ${assessment.risk_score}`,
+        "",
+        "Side Effects:",
+      ];
+      if (assessment.risk_factors && assessment.risk_factors.length > 0) {
+        for (const f of assessment.risk_factors) {
+          lines.push(`  - ${f.description} (${f.severity})`);
+        }
+      } else {
+        lines.push("  No significant side effects identified.");
+      }
+      if (assessment.recommendation) {
+        lines.push("", `Recommendation: ${assessment.recommendation}`);
+      }
+      return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+    } catch (err) {
+      return errorContent(err);
+    }
+  }
+);
+
+// @ts-ignore — MCP SDK deep type instantiation
+server.tool(
+  "get_skills",
+  "List all available Nucleus skills (reusable command workflows)",
+  {},
+  async () => {
+    try {
+      const skills = await client.getSkills();
+      if (!skills || skills.length === 0) {
+        return { content: [{ type: "text" as const, text: "No skills available." }] };
+      }
+      const lines = [`Available Skills (${skills.length}):`, ""];
+      for (const s of skills) {
+        lines.push(`  ${s.name}: ${s.description || "No description"}`);
+        if (s.parameters && s.parameters.length > 0) {
+          for (const p of s.parameters) {
+            lines.push(`    - ${p.name} (${p.type}${p.required ? ", required" : ""})`);
+          }
+        }
+        lines.push("");
+      }
+      return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+    } catch (err) {
+      return errorContent(err);
+    }
+  }
+);
+
 // ---------------------------------------------------------------------------
 // Resources
 // ---------------------------------------------------------------------------
@@ -687,6 +782,47 @@ Please:
 3. Highlight any failures or risky operations
 4. Note the relationships between commands (from the graph)
 5. Provide an overall assessment of the session outcome`,
+          },
+        },
+      ],
+    };
+  }
+);
+
+server.prompt(
+  "onboard_project",
+  "Analyse the current project and suggest Nucleus skills and workflows tailored for its tech stack",
+  {},
+  async () => {
+    let contextText: string;
+    try {
+      const ctx = await client.getContext(true, true, false);
+      const skills = await client.getSkills();
+      contextText = JSON.stringify({ context: ctx, available_skills: skills }, null, 2);
+    } catch (err) {
+      contextText = `Failed to fetch context: ${err instanceof Error ? err.message : "unknown error"}`;
+    }
+
+    return {
+      messages: [
+        {
+          role: "user" as const,
+          content: {
+            type: "text" as const,
+            text: `Please analyse the current project environment and suggest Nucleus skills and workflows tailored for this project's tech stack.
+
+Current environment and available skills:
+
+\`\`\`json
+${contextText}
+\`\`\`
+
+Please:
+1. Identify the project's tech stack from the working directory contents
+2. Suggest which built-in skills are most useful for this project
+3. Propose 2-3 custom skills specific to this project (provide YAML definitions)
+4. Recommend a daily developer workflow using Nucleus commands
+5. Identify any potential issues or improvements in the current environment`,
           },
         },
       ],

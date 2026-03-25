@@ -78,10 +78,10 @@ func main() {
 		c.Next()
 	})
 
-	// Health check (no auth)
-	r.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"status": "ok", "service": "nucleus-api", "version": "1.0"})
-	})
+	// Health + metrics (no auth)
+	r.GET("/health", handlers.GetHealthReady)
+	r.GET("/health/ready", handlers.GetHealthReady)
+	r.GET("/metrics", handlers.GetMetrics)
 
 	// API v1 routes
 	v1 := r.Group("/api/v1")
@@ -122,6 +122,12 @@ func main() {
 		// Session detail and export
 		v1.GET("/sessions/:id", handlers.GetSessionReplay)
 		v1.GET("/sessions/:id/export", handlers.GetSessionReplay)
+
+		// Natural language
+		v1.POST("/natural/translate", handlers.NaturalTranslate)
+
+		// Search
+		v1.GET("/search", handlers.SearchExecutions)
 
 		// WebSocket
 		v1.GET("/ws/stream", handlers.WSStream)

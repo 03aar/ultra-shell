@@ -277,4 +277,27 @@ export class NucleusAPIClient {
       return resp.data;
     }, "searchHistory");
   }
+
+  async translateNaturalLanguage(
+    input: string
+  ): Promise<{ command: string; explanation: string; risk_level: string }> {
+    return this.withRetry(async () => {
+      const resp = await this.client.post("/api/v1/natural/translate", { input });
+      return resp.data?.data || resp.data;
+    }, "translateNaturalLanguage");
+  }
+
+  async getSkills(): Promise<
+    Array<{
+      name: string;
+      description: string;
+      parameters: Array<{ name: string; type: string; required: boolean }>;
+      source: string;
+    }>
+  > {
+    return this.withRetry(async () => {
+      const resp = await this.client.get("/api/v1/skills");
+      return resp.data?.data || resp.data || [];
+    }, "getSkills");
+  }
 }
