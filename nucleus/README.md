@@ -34,19 +34,114 @@ NUCLEUS replaces raw bash/zsh as the interface layer for AI agents. It provides 
      └─────────┘                   └──────────────┘
 ```
 
-## Quickstart
+## Installation
+
+### Quick Start (Docker — all platforms)
+
+**Prerequisites:** [Docker Desktop](https://docs.docker.com/get-docker/) (Mac, Windows, Linux)
 
 ```bash
-git clone <repo-url> && cd nucleus
-docker compose up --build
+git clone https://github.com/03aar/ultra-shell.git
+cd ultra-shell/nucleus
+docker compose up --build -d
 ```
 
 Then open:
 - **Dashboard**: http://localhost:3000
 - **API**: http://localhost:8080
 - **API Health**: http://localhost:8080/health
+- **API Key**: `dev-nucleus-key-local`
 
-Default API key: `dev-nucleus-key-local`
+### macOS
+
+```bash
+# Install Docker if not present
+brew install --cask docker
+
+# Clone and start
+git clone https://github.com/03aar/ultra-shell.git
+cd ultra-shell/nucleus
+./scripts/install.sh
+```
+
+**Optional — install CLI locally:**
+```bash
+brew install rust
+cd nucleus-core && cargo build --release
+sudo cp target/release/nucleus /usr/local/bin/
+```
+
+### Linux / Ubuntu / Debian
+
+```bash
+# Install Docker if not present
+curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker $USER
+newgrp docker
+
+# Clone and start
+git clone https://github.com/03aar/ultra-shell.git
+cd ultra-shell/nucleus
+./scripts/install.sh
+```
+
+**Optional — install CLI locally:**
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+cd nucleus-core && cargo build --release
+sudo cp target/release/nucleus /usr/local/bin/
+```
+
+### Windows
+
+```powershell
+# Install Docker Desktop from https://docs.docker.com/desktop/install/windows-install/
+
+# Clone and start
+git clone https://github.com/03aar/ultra-shell.git
+cd ultra-shell\nucleus
+.\scripts\install.ps1
+```
+
+**Optional — install CLI locally:**
+```powershell
+# Install Rust from https://rustup.rs
+cd nucleus-core
+cargo build --release
+copy target\release\nucleus.exe C:\Windows\System32\nucleus.exe
+```
+
+### Using Make
+
+```bash
+make setup     # Check prerequisites
+make dev       # Start all services (Docker)
+make build     # Build all binaries locally (requires Rust, Go, Node.js)
+make test      # Run all tests
+make install   # Install nucleus CLI to /usr/local/bin
+make stop      # Stop all services
+make logs      # Follow service logs
+make clean     # Remove build artifacts and volumes
+```
+
+## Configuration
+
+Copy `.env.example` to `.env` to customize:
+
+```bash
+cp .env.example .env
+```
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `NUCLEUS_REDIS_URL` | `redis://localhost:6379` | Redis connection URL |
+| `DATABASE_URL` | `postgres://nucleus:...@localhost:5432/nucleus` | PostgreSQL connection |
+| `PORT` | `8080` | API server port |
+| `NEXT_PUBLIC_API_URL` | `http://localhost:8080/api/v1` | Dashboard API URL |
+| `NEXT_PUBLIC_WS_URL` | `ws://localhost:8080/api/v1` | Dashboard WebSocket URL |
+| `NEXT_PUBLIC_API_KEY` | `dev-nucleus-key-local` | API key for dashboard |
+| `NUCLEUS_DATA_DIR` | `~/.nucleus/data` | Sled database directory |
+| `RUST_LOG` | `info` | Rust log level |
 
 ## Components
 
@@ -54,21 +149,21 @@ Default API key: `dev-nucleus-key-local`
 
 The PTY interception layer and context engine:
 
-- **PTY Multiplexer** — Forks a child shell (bash/zsh/fish), intercepts all I/O
-- **Command Parser** — Parses commands into structured data: binary, args, flags, pipes, redirections, env assignments. Classifies by category (filesystem, network, git, docker, build, etc.)
-- **Risk Evaluator** — Pre-execution risk analysis. Detects destructive commands (rm -rf /, chmod 777, kill -9), repeated failures, dangerous flags. Blocks critical operations.
-- **Execution Graph** — DAG of all command executions stored in sled. Tracks file dependencies, env var dependencies, and process lifecycle edges.
-- **Session Memory** — Persistent session data across restarts. Stores metadata, env snapshots, failure patterns.
+- **PTY Multiplexer** — Forks a child shell (bash/zsh/fish on Unix, cmd.exe on Windows), intercepts all I/O
+- **Command Parser** — Parses commands into structured data: binary, args, flags, pipes, redirections, env assignments. Classifies into 10 categories (filesystem, network, git, docker, build, etc.)
+- **Risk Evaluator** — Pre-execution risk analysis. Blocks `rm -rf /`, warns on `chmod 777`, `git push --force`, `kill -9`, `dd`. Tracks repeated failures.
+- **Execution Graph** — DAG of all executions stored in sled. Tracks file, env, and process dependencies.
+- **Session Memory** — Persistent across restarts. Stores metadata, env snapshots, failure patterns.
 - **Rollback Engine** — Pre-execution file snapshots. Restore files and env vars to pre-command state.
-- **Redis IPC** — Publishes execution events, rollback events, and session events to Redis pub/sub channels.
+- **Redis IPC** — Publishes events to Redis pub/sub for real-time streaming.
 
 ### nucleus-api (Go)
 
-REST + WebSocket API server:
+REST + WebSocket API server (cross-platform: Linux, macOS, Windows):
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/v1/executions` | GET | List executions (filterable) |
+| `/api/v1/executions` | GET | List executions (filterable by session, risk, category) |
 | `/api/v1/executions/:id` | GET | Full execution details |
 | `/api/v1/executions/:id/context` | GET | Execution + dependency context |
 | `/api/v1/context` | GET | Current environment state |
@@ -90,6 +185,8 @@ Dark-theme dashboard with 5 views:
 - **Environment** — Live env state, process table, file mutation tracker
 - **API Explorer** — Interactive API tester with code snippets (curl/Python/TypeScript)
 
+Design system: `#000000` bg, `#0a0a0a` surface, `#00ff88` accent. JetBrains Mono / Syne / DM Sans.
+
 ### SDKs
 
 **Python:**
@@ -100,6 +197,9 @@ client = NucleusClient("http://localhost:8080/api/v1", "dev-nucleus-key-local")
 executions = client.get_executions(limit=10)
 context = client.get_context()
 result = client.rollback("execution-uuid")
+
+# Real-time streaming
+client.stream(lambda event_type, data: print(f"{event_type}: {data}"))
 ```
 
 **TypeScript:**
@@ -112,23 +212,15 @@ const context = await client.getContext();
 const ws = client.stream((msg) => console.log(msg));
 ```
 
-## Make Targets
-
-```bash
-make dev       # Start all services with Docker Compose
-make build     # Build all production binaries
-make test      # Run all tests
-make install   # Install nucleus binary to /usr/local/bin
-make stop      # Stop all services
-make logs      # Follow service logs
-make clean     # Remove build artifacts and volumes
-```
-
 ## Database
 
-PostgreSQL tables: `sessions`, `api_keys`, `audit_logs`, `rollback_events`
+**PostgreSQL tables:**
+- `sessions` — Shell session metadata
+- `api_keys` — API key hashes for auth
+- `audit_logs` — Action audit trail
+- `rollback_events` — Rollback history
 
-Embedded sled DB (in nucleus-core): execution nodes, session metadata, file snapshots, execution graph edges
+**Embedded sled DB** (nucleus-core): Execution nodes, session metadata, file snapshots, graph edges
 
 ## Tech Stack
 
@@ -139,6 +231,17 @@ Embedded sled DB (in nucleus-core): execution nodes, session metadata, file snap
 | Dashboard | Next.js 14, React, TypeScript, ReactFlow, xterm.js, Tailwind CSS |
 | Database | PostgreSQL 15, sled (embedded), Redis 7 |
 | DevOps | Docker Compose, Make |
+
+## Platform Support
+
+| Platform | Docker | Local Build | CLI |
+|----------|--------|-------------|-----|
+| macOS (Intel/ARM) | Yes | Yes | Yes |
+| Linux (x86_64/ARM64) | Yes | Yes | Yes |
+| Ubuntu 20.04+ | Yes | Yes | Yes |
+| Debian 11+ | Yes | Yes | Yes |
+| Windows 10/11 | Yes | Yes | Yes |
+| WSL2 | Yes | Yes | Yes |
 
 ## License
 

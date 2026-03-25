@@ -4,9 +4,9 @@ import (
 	"nucleus-api/models"
 	"os"
 	"os/exec"
+	"runtime"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"github.com/gin-gonic/gin"
 )
@@ -54,11 +54,7 @@ func buildContextState() models.ContextState {
 	processes := getTopProcesses()
 	envVars := getFilteredEnvVars()
 	diskUsage := getDiskUsage()
-
-	openFiles := 0
-	if out := runCommand("sh", "-c", "ls /proc/self/fd 2>/dev/null | wc -l"); out != "" {
-		openFiles, _ = strconv.Atoi(strings.TrimSpace(out))
-	}
+	openFiles := getOpenFilesCount()
 
 	return models.ContextState{
 		Cwd:              cwd,
@@ -81,7 +77,45 @@ func runCommand(name string, args ...string) string {
 }
 
 func getTopProcesses() []models.ProcessInfo {
-	out := runCommand("ps", "aux", "--sort=-%cpu")
+	processes := make([]models.ProcessInfo, 0, 20)
+
+	switch runtime.GOOS {
+	case "linux":
+		out := runCommand("ps", "aux", "--sort=-%cpu")
+		processes = parsePsOutput(out)
+	case "darwin":
+		// macOS uses BSD ps without --sort
+		out := runCommand("ps", "aux", "-r")
+		processes = parsePsOutput(out)
+	case "windows":
+		out := runCommand("tasklist", "/FO", "CSV", "/NH")
+		lines := strings.Split(out, "\n")
+		for i, line := range lines {
+			if i >= 20 || strings.TrimSpace(line) == "" {
+				break
+			}
+			fields := strings.Split(line, ",")
+			if len(fields) < 5 {
+				continue
+			}
+			name := strings.Trim(fields[0], "\"")
+			pid, _ := strconv.Atoi(strings.Trim(fields[1], "\""))
+			mem := strings.Trim(fields[4], "\" K\r\n")
+			memKB, _ := strconv.ParseFloat(strings.ReplaceAll(mem, ",", ""), 64)
+			processes = append(processes, models.ProcessInfo{
+				PID:     pid,
+				Name:    name,
+				CPU:     0,
+				Memory:  memKB / 1024,
+				Command: name,
+			})
+		}
+	}
+
+	return processes
+}
+
+func parsePsOutput(out string) []models.ProcessInfo {
 	lines := strings.Split(out, "\n")
 	processes := make([]models.ProcessInfo, 0, 20)
 
@@ -148,24 +182,20 @@ func getFilteredEnvVars() map[string]string {
 	return vars
 }
 
-func getDiskUsage() models.DiskUsage {
-	var stat syscall.Statfs_t
-	if err := syscall.Statfs("/", &stat); err != nil {
-		return models.DiskUsage{}
+func getOpenFilesCount() int {
+	switch runtime.GOOS {
+	case "linux":
+		out := runCommand("sh", "-c", "ls /proc/self/fd 2>/dev/null | wc -l")
+		if out != "" {
+			n, _ := strconv.Atoi(strings.TrimSpace(out))
+			return n
+		}
+	case "darwin":
+		out := runCommand("sh", "-c", "lsof -p $$ 2>/dev/null | wc -l")
+		if out != "" {
+			n, _ := strconv.Atoi(strings.TrimSpace(out))
+			return n
+		}
 	}
-
-	total := stat.Blocks * uint64(stat.Bsize)
-	free := stat.Bfree * uint64(stat.Bsize)
-	used := total - free
-	percent := 0.0
-	if total > 0 {
-		percent = float64(used) / float64(total) * 100
-	}
-
-	return models.DiskUsage{
-		Total:     total,
-		Used:      used,
-		Available: free,
-		Percent:   percent,
-	}
+	return 0
 }

@@ -13,6 +13,30 @@ use std::sync::{Arc, Mutex};
 use std::time::Instant;
 use uuid::Uuid;
 
+/// Returns the default shell for the current platform.
+fn default_shell() -> String {
+    #[cfg(windows)]
+    {
+        std::env::var("COMSPEC").unwrap_or_else(|_| "cmd.exe".to_string())
+    }
+    #[cfg(not(windows))]
+    {
+        std::env::var("SHELL").unwrap_or_else(|_| "/bin/bash".to_string())
+    }
+}
+
+/// Returns the shell and flag used for `execute_command` one-liners.
+fn shell_exec_args() -> (&'static str, &'static str) {
+    #[cfg(windows)]
+    {
+        ("cmd.exe", "/C")
+    }
+    #[cfg(not(windows))]
+    {
+        ("sh", "-c")
+    }
+}
+
 pub struct NucleusShell {
     session_id: String,
     graph: Arc<Mutex<ExecutionGraph>>,
@@ -23,10 +47,7 @@ pub struct NucleusShell {
 }
 
 impl NucleusShell {
-    pub fn new(
-        db: sled::Db,
-        redis_url: &str,
-    ) -> Self {
+    pub fn new(db: sled::Db, redis_url: &str) -> Self {
         let session_id = Uuid::new_v4().to_string();
         let graph = Arc::new(Mutex::new(ExecutionGraph::new(db.clone())));
         let memory = Arc::new(SessionMemory::new(db.clone()));
@@ -34,14 +55,12 @@ impl NucleusShell {
         let risk_evaluator = Arc::new(Mutex::new(RiskEvaluator::new()));
         let redis_publisher = Arc::new(RedisPublisher::new_with_fallback(redis_url));
 
-        // Save session metadata
         let cwd = std::env::current_dir()
             .unwrap_or_default()
             .to_string_lossy()
             .to_string();
 
         let git_repo = SessionMemory::detect_git_repo(&cwd);
-
         let env_snapshot: HashMap<String, String> = std::env::vars().collect();
 
         let session = SessionMetadata {
@@ -56,7 +75,6 @@ impl NucleusShell {
         };
         memory.save_session(&session);
 
-        // Publish session started event
         if let Ok(json) = serde_json::to_string(&serde_json::json!({
             "type": "session_started",
             "session_id": session_id,
@@ -81,7 +99,7 @@ impl NucleusShell {
 
     /// Run the interactive shell with PTY interception
     pub fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/bash".to_string());
+        let shell = default_shell();
 
         let pty_system = NativePtySystem::default();
         let pair = pty_system.openpty(PtySize {
@@ -95,22 +113,20 @@ impl NucleusShell {
         cmd.env("NUCLEUS_SESSION", &self.session_id);
         cmd.env("NUCLEUS_ACTIVE", "1");
 
-        let child = pair.slave.spawn_command(cmd)?;
+        let _child = pair.slave.spawn_command(cmd)?;
         drop(pair.slave);
 
-        let mut master = pair.master;
+        let master = pair.master;
 
-        // Shared state for command buffer
         let command_buffer = Arc::new(Mutex::new(String::new()));
         let in_command = Arc::new(Mutex::new(false));
 
-        // Read from master (child output) and forward to stdout
+        // --- Output reader thread ---
         let mut reader = master.try_clone_reader()?;
         let cmd_buf_clone = command_buffer.clone();
         let in_cmd_clone = in_command.clone();
         let session_id = self.session_id.clone();
         let graph = self.graph.clone();
-        let risk_evaluator = self.risk_evaluator.clone();
         let snapshot_engine = self.snapshot_engine.clone();
         let redis_publisher = self.redis_publisher.clone();
 
@@ -124,15 +140,12 @@ impl NucleusShell {
                     Ok(0) => break,
                     Ok(n) => {
                         let data = &buf[..n];
-                        // Write to real stdout
                         let _ = std::io::stdout().write_all(data);
                         let _ = std::io::stdout().flush();
 
-                        // Capture output for the current command
                         let text = String::from_utf8_lossy(data);
                         output_capture.push_str(&text);
 
-                        // Detect prompt return (simplified: look for $ or # or > at line start)
                         if is_prompt_return(&text) {
                             let is_in_cmd = *in_cmd_clone.lock().unwrap();
                             if is_in_cmd {
@@ -142,13 +155,9 @@ impl NucleusShell {
                                         .map(|s| s.elapsed().as_millis() as u64)
                                         .unwrap_or(0);
 
-                                    // Process the completed command
                                     let parsed = parse_command(&cmd_str);
+                                    let exit_code = 0;
 
-                                    // Determine exit code from output (simplified)
-                                    let exit_code = 0; // In real impl, would parse $?
-
-                                    // Truncate stdout to 4KB
                                     let stdout = if output_capture.len() > 4096 {
                                         output_capture[..4096].to_string()
                                     } else {
@@ -177,12 +186,10 @@ impl NucleusShell {
                                         session_id: session_id.clone(),
                                     };
 
-                                    // Add to graph
                                     if let Ok(mut g) = graph.lock() {
                                         g.add_node(&node);
                                     }
 
-                                    // Publish to Redis
                                     if let Ok(json) = serde_json::to_string(&node) {
                                         redis_publisher.publish_execution(&json);
                                     }
@@ -200,61 +207,52 @@ impl NucleusShell {
             }
         });
 
-        // Read from stdin and forward to master (with interception)
+        // --- Input reader thread ---
         let mut writer = master.take_writer()?;
         let cmd_buf_input = command_buffer.clone();
         let in_cmd_input = in_command.clone();
         let risk_eval = self.risk_evaluator.clone();
         let snap_engine = self.snapshot_engine.clone();
-        let redis_pub = self.redis_publisher.clone();
 
         let input_thread = std::thread::spawn(move || {
             let stdin = std::io::stdin();
             let mut buf = [0u8; 1024];
 
-            // Set stdin to raw mode for proper terminal forwarding
             loop {
                 match stdin.lock().read(&mut buf) {
                     Ok(0) => break,
                     Ok(n) => {
                         let data = &buf[..n];
-                        let text = String::from_utf8_lossy(data);
 
-                        // Detect enter key (newline)
                         if data.contains(&b'\n') || data.contains(&b'\r') {
                             let cmd_str = cmd_buf_input.lock().unwrap().clone();
                             if !cmd_str.trim().is_empty() {
                                 let parsed = parse_command(&cmd_str);
-
-                                // Risk evaluation
                                 let assessment = risk_eval.lock().unwrap().evaluate(&parsed);
 
                                 if assessment.block_execution {
-                                    // Print warning and don't forward
                                     let warning = format!(
                                         "\r\n\x1b[1;31m[NUCLEUS] BLOCKED: {}\x1b[0m\r\n",
                                         assessment.warnings.join("; ")
                                     );
-                                    let _ = std::io::stdout()
-                                        .write_all(warning.as_bytes());
+                                    let _ =
+                                        std::io::stdout().write_all(warning.as_bytes());
                                     let _ = std::io::stdout().flush();
                                     cmd_buf_input.lock().unwrap().clear();
                                     continue;
                                 }
 
-                                // Show risk warnings
                                 if assessment.risk_level >= RiskLevel::Medium {
                                     let warning = format!(
                                         "\r\n\x1b[1;33m[NUCLEUS] Risk {}: {}\x1b[0m\r\n",
                                         assessment.risk_level,
                                         assessment.warnings.join("; ")
                                     );
-                                    let _ = std::io::stdout()
-                                        .write_all(warning.as_bytes());
+                                    let _ =
+                                        std::io::stdout().write_all(warning.as_bytes());
                                     let _ = std::io::stdout().flush();
                                 }
 
-                                // Take snapshot for mutating commands
                                 if parsed.category == CommandCategory::FilesystemMutation
                                     || parsed.category == CommandCategory::EnvChange
                                 {
@@ -267,9 +265,7 @@ impl NucleusShell {
                                         parsed.env_assignments.keys().cloned().collect();
                                     let exec_id = Uuid::new_v4().to_string();
                                     snap_engine.take_snapshot(
-                                        &exec_id,
-                                        &files,
-                                        &env_vars,
+                                        &exec_id, &files, &env_vars,
                                     );
                                 }
 
@@ -277,22 +273,18 @@ impl NucleusShell {
                             }
                             cmd_buf_input.lock().unwrap().clear();
                         } else {
-                            // Accumulate command characters
-                            let mut buf = cmd_buf_input.lock().unwrap();
+                            let mut cmd_buf = cmd_buf_input.lock().unwrap();
                             for &byte in data {
                                 if byte == 127 || byte == 8 {
-                                    // Backspace
-                                    buf.pop();
+                                    cmd_buf.pop();
                                 } else if byte == 3 {
-                                    // Ctrl+C
-                                    buf.clear();
+                                    cmd_buf.clear();
                                 } else if byte >= 32 {
-                                    buf.push(byte as char);
+                                    cmd_buf.push(byte as char);
                                 }
                             }
                         }
 
-                        // Forward to the shell
                         let _ = writer.write_all(data);
                         let _ = writer.flush();
                     }
@@ -304,19 +296,16 @@ impl NucleusShell {
         let _ = output_thread.join();
         let _ = input_thread.join();
 
-        // End session
         self.memory.end_session(&self.session_id);
-
         Ok(())
     }
 
+    /// Execute a single command non-interactively and return the result.
     pub fn execute_command(&self, command: &str) -> ExecutionNode {
         let parsed = parse_command(command);
         let assessment = self.risk_evaluator.lock().unwrap().evaluate(&parsed);
-
         let exec_id = Uuid::new_v4().to_string();
 
-        // Take snapshot if mutating
         let rollback_available = if parsed.category == CommandCategory::FilesystemMutation
             || parsed.category == CommandCategory::EnvChange
         {
@@ -333,31 +322,27 @@ impl NucleusShell {
             false
         };
 
-        // Execute command
+        let (shell, flag) = shell_exec_args();
         let start = Instant::now();
-        let output = std::process::Command::new("sh")
-            .arg("-c")
+        let output = std::process::Command::new(shell)
+            .arg(flag)
             .arg(command)
             .output();
-
         let duration_ms = start.elapsed().as_millis() as u64;
 
         let (exit_code, stdout, stderr) = match output {
             Ok(out) => {
-                let exit_code = out.status.code().unwrap_or(-1);
-                let stdout = String::from_utf8_lossy(&out.stdout).to_string();
-                let stderr = String::from_utf8_lossy(&out.stderr).to_string();
-
-                if exit_code != 0 {
+                let code = out.status.code().unwrap_or(-1);
+                let out_str = String::from_utf8_lossy(&out.stdout).to_string();
+                let err_str = String::from_utf8_lossy(&out.stderr).to_string();
+                if code != 0 {
                     self.risk_evaluator.lock().unwrap().record_failure(command);
                 }
-
-                (exit_code, stdout, stderr)
+                (code, out_str, err_str)
             }
             Err(e) => (-1, String::new(), e.to_string()),
         };
 
-        // Truncate stdout to 4KB
         let stdout_truncated = if stdout.len() > 4096 {
             stdout[..4096].to_string()
         } else {
@@ -385,12 +370,9 @@ impl NucleusShell {
             session_id: self.session_id.clone(),
         };
 
-        // Add to graph
         if let Ok(mut g) = self.graph.lock() {
             g.add_node(&node);
         }
-
-        // Publish to Redis
         if let Ok(json) = serde_json::to_string(&node) {
             self.redis_publisher.publish_execution(&json);
         }
@@ -398,6 +380,7 @@ impl NucleusShell {
         node
     }
 
+    /// Rollback a specific execution, restoring snapshotted files and env vars.
     pub fn rollback(&self, execution_id: &str) -> crate::rollback::snapshot::RollbackResult {
         let result = self.snapshot_engine.rollback(execution_id);
 
@@ -405,8 +388,6 @@ impl NucleusShell {
             if let Ok(mut g) = self.graph.lock() {
                 g.mark_rolled_back(execution_id);
             }
-
-            // Publish rollback event
             if let Ok(json) = serde_json::to_string(&serde_json::json!({
                 "type": "rollback_complete",
                 "execution_id": execution_id,
@@ -433,8 +414,6 @@ fn is_prompt_return(text: &str) -> bool {
             || trimmed.ends_with('#')
             || trimmed.ends_with('>')
             || trimmed.ends_with('%')
-            || trimmed.contains("❯")
-            || trimmed.contains("➜")
     } else {
         false
     }

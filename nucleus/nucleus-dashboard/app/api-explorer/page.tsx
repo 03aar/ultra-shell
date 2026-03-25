@@ -96,8 +96,8 @@ export default function APIExplorerPage() {
       });
       const json = await res.json();
       setResponse(JSON.stringify(json, null, 2));
-    } catch (e: any) {
-      setResponse(`Error: ${e.message}`);
+    } catch (e: unknown) {
+      setResponse(`Error: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
       setLoading(false);
     }

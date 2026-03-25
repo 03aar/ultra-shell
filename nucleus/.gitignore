@@ -1,0 +1,38 @@
+# Rust
+nucleus-core/target/
+nucleus-core/Cargo.lock
+
+# Go
+nucleus-api/nucleus-api
+nucleus-api/go.sum
+
+# Node.js / Next.js
+nucleus-dashboard/node_modules/
+nucleus-dashboard/.next/
+nucleus-dashboard/out/
+nucleus-dashboard/.env.local
+
+# Build output
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker volumes
+postgres_data/
+nucleus_data/
+
+# Environment
+.env
+*.env.local
+
+# Logs
+*.log

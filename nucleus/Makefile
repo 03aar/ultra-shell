@@ -1,18 +1,34 @@
-.PHONY: dev build test install clean help
+.PHONY: dev build test install clean help stop logs setup
 
 # Default target
 help:
 	@echo "NUCLEUS — AI-Native Shell Runtime"
 	@echo ""
-	@echo "Targets:"
-	@echo "  make dev       Start all services with Docker Compose"
-	@echo "  make build     Build all production binaries"
-	@echo "  make test      Run all tests"
-	@echo "  make install   Install nucleus binary to /usr/local/bin"
-	@echo "  make clean     Remove build artifacts and volumes"
-	@echo "  make stop      Stop all services"
-	@echo "  make logs      Follow all service logs"
+	@echo "Quick Start:"
+	@echo "  make dev         Start all services with Docker Compose"
 	@echo ""
+	@echo "Development:"
+	@echo "  make build       Build all production binaries locally"
+	@echo "  make test        Run all tests"
+	@echo "  make install     Install nucleus binary to /usr/local/bin"
+	@echo ""
+	@echo "Operations:"
+	@echo "  make stop        Stop all services"
+	@echo "  make logs        Follow all service logs"
+	@echo "  make clean       Remove build artifacts and volumes"
+	@echo "  make setup       Check prerequisites and show setup guide"
+	@echo ""
+
+# Check prerequisites
+setup:
+	@echo "Checking prerequisites..."
+	@command -v docker >/dev/null 2>&1 && echo "  [OK] Docker" || echo "  [MISSING] Docker — install from https://docs.docker.com/get-docker/"
+	@docker compose version >/dev/null 2>&1 && echo "  [OK] Docker Compose" || echo "  [MISSING] Docker Compose"
+	@command -v cargo >/dev/null 2>&1 && echo "  [OK] Rust/Cargo (for local build)" || echo "  [SKIP] Rust/Cargo (optional, for local build)"
+	@command -v go >/dev/null 2>&1 && echo "  [OK] Go (for local build)" || echo "  [SKIP] Go (optional, for local build)"
+	@command -v node >/dev/null 2>&1 && echo "  [OK] Node.js (for local build)" || echo "  [SKIP] Node.js (optional, for local build)"
+	@echo ""
+	@echo "To start NUCLEUS with Docker: make dev"
 
 # Start all services
 dev:
@@ -23,18 +39,25 @@ dev:
 	@echo "  API:        http://localhost:8080"
 	@echo "  API Health: http://localhost:8080/health"
 	@echo ""
-	@echo "API Key: dev-nucleus-key-local"
+	@echo "  API Key: dev-nucleus-key-local"
+	@echo ""
+	@echo "  Logs:  make logs"
+	@echo "  Stop:  make stop"
 
-# Build all production binaries
+# Build all production binaries (requires Rust, Go, Node.js locally)
 build:
 	@echo "Building nucleus-core (Rust)..."
 	cd nucleus-core && cargo build --release
-	@echo "Building nucleus-api (Go)..."
-	cd nucleus-api && go build -o ../build/nucleus-api .
-	@echo "Building nucleus-dashboard (Next.js)..."
-	cd nucleus-dashboard && npm install && npm run build
 	@echo ""
-	@echo "Build complete."
+	@echo "Building nucleus-api (Go)..."
+	cd nucleus-api && go mod tidy && go build -o ../build/nucleus-api .
+	@echo ""
+	@echo "Building nucleus-dashboard (Next.js)..."
+	cd nucleus-dashboard && npm install --legacy-peer-deps && npm run build
+	@echo ""
+	@echo "Build complete. Binaries in:"
+	@echo "  nucleus-core/target/release/nucleus"
+	@echo "  build/nucleus-api"
 
 # Run all tests
 test:
@@ -42,16 +65,19 @@ test:
 	cd nucleus-core && cargo test
 	@echo ""
 	@echo "Testing nucleus-api..."
-	cd nucleus-api && go test ./...
+	cd nucleus-api && go mod tidy && go test ./...
 	@echo ""
 	@echo "All tests passed."
 
-# Install nucleus binary
-install: build
-	@echo "Installing nucleus to /usr/local/bin..."
+# Install nucleus binary (Unix only)
+install:
+	@echo "Building nucleus..."
+	cd nucleus-core && cargo build --release
+	@echo "Installing to /usr/local/bin/nucleus..."
 	sudo cp nucleus-core/target/release/nucleus /usr/local/bin/nucleus
 	sudo chmod +x /usr/local/bin/nucleus
-	@echo "Installed. Run 'nucleus' to start."
+	@echo ""
+	@echo "Installed. Run 'nucleus' to start an AI-native shell session."
 
 # Stop all services
 stop:
@@ -63,9 +89,8 @@ logs:
 
 # Clean everything
 clean:
-	docker compose down -v --rmi local
-	cd nucleus-core && cargo clean
-	cd nucleus-api && rm -f nucleus-api
-	cd nucleus-dashboard && rm -rf .next node_modules
+	docker compose down -v --rmi local 2>/dev/null || true
+	cd nucleus-core && cargo clean 2>/dev/null || true
 	rm -rf build/
+	cd nucleus-dashboard && rm -rf .next node_modules 2>/dev/null || true
 	@echo "Cleaned."

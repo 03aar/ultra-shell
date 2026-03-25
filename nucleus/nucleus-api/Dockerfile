@@ -2,10 +2,6 @@ FROM golang:1.21-bookworm AS builder
 
 WORKDIR /app
 COPY go.mod ./
-
-# Create go.sum if it doesn't exist
-RUN go mod download 2>/dev/null || true
-
 COPY . .
 RUN go mod tidy && CGO_ENABLED=0 GOOS=linux go build -o nucleus-api .
 
@@ -17,4 +13,4 @@ COPY --from=builder /app/nucleus-api /usr/local/bin/nucleus-api
 
 EXPOSE 8080
 
-ENTRYPOINT ["nucleus-api"]
+CMD ["nucleus-api"]

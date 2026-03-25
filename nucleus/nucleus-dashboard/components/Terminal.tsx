@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import type { Terminal as XTerminal } from 'xterm';
 
 interface TerminalProps {
   wsUrl?: string;
@@ -8,18 +9,19 @@ interface TerminalProps {
 
 export default function Terminal({ wsUrl }: TerminalProps) {
   const terminalRef = useRef<HTMLDivElement>(null);
-  const xtermRef = useRef<any>(null);
+  const xtermRef = useRef<XTerminal | null>(null);
 
   useEffect(() => {
-    let terminal: any;
-    let fitAddon: any;
+    let disposed = false;
 
     const initTerminal = async () => {
-      const { Terminal } = await import('xterm');
+      const { Terminal: XTerm } = await import('xterm');
       const { FitAddon } = await import('xterm-addon-fit');
       const { WebLinksAddon } = await import('xterm-addon-web-links');
 
-      terminal = new Terminal({
+      if (disposed) return;
+
+      const terminal = new XTerm({
         theme: {
           background: '#0a0a0a',
           foreground: '#e8e8e8',
@@ -50,7 +52,7 @@ export default function Terminal({ wsUrl }: TerminalProps) {
         cursorStyle: 'bar',
       });
 
-      fitAddon = new FitAddon();
+      const fitAddon = new FitAddon();
       terminal.loadAddon(fitAddon);
       terminal.loadAddon(new WebLinksAddon());
 
@@ -61,8 +63,9 @@ export default function Terminal({ wsUrl }: TerminalProps) {
 
       xtermRef.current = terminal;
 
-      // Connect to WebSocket if URL provided
-      const wsEndpoint = wsUrl || `ws://localhost:8080/api/v1/ws/stream?api_key=dev-nucleus-key-local`;
+      // Connect to WebSocket
+      const wsEndpoint =
+        wsUrl || `ws://localhost:8080/api/v1/ws/stream?api_key=dev-nucleus-key-local`;
       const ws = new WebSocket(wsEndpoint);
 
       ws.onopen = () => {
@@ -79,13 +82,16 @@ export default function Terminal({ wsUrl }: TerminalProps) {
             const exitColor = exec.exit_code === 0 ? '32' : '31';
             terminal.writeln(
               `\x1b[90m${new Date(exec.timestamp).toLocaleTimeString()}\x1b[0m ` +
-              `\x1b[1;${exitColor}m$\x1b[0m ${exec.command.raw}`
+                `\x1b[1;${exitColor}m$\x1b[0m ${exec.command.raw}`
             );
 
             if (exec.risk_flags && exec.risk_flags.length > 0) {
               for (const flag of exec.risk_flags) {
-                const riskColor = flag.level === 'critical' ? '31' : flag.level === 'high' ? '33' : '33';
-                terminal.writeln(`  \x1b[${riskColor}m⚠ [${flag.level.toUpperCase()}]\x1b[0m ${flag.message}`);
+                const riskColor =
+                  flag.level === 'critical' ? '31' : flag.level === 'high' ? '33' : '33';
+                terminal.writeln(
+                  `  \x1b[${riskColor}m! [${flag.level.toUpperCase()}]\x1b[0m ${flag.message}`
+                );
               }
             }
 
@@ -100,15 +106,19 @@ export default function Terminal({ wsUrl }: TerminalProps) {
             }
 
             if (exec.rollback_available) {
-              terminal.writeln(`  \x1b[32m↩ Rollback available (${exec.id.slice(0, 8)})\x1b[0m`);
+              terminal.writeln(
+                `  \x1b[32m<- Rollback available (${exec.id.slice(0, 8)})\x1b[0m`
+              );
             }
 
             terminal.writeln('');
           } else if (msg.type === 'rollback_complete') {
-            terminal.writeln(`\x1b[1;33m[ROLLBACK]\x1b[0m Execution rolled back successfully`);
+            terminal.writeln(
+              `\x1b[1;33m[ROLLBACK]\x1b[0m Execution rolled back successfully`
+            );
             terminal.writeln('');
           }
-        } catch (e) {
+        } catch {
           // ignore parse errors
         }
       };
@@ -118,32 +128,45 @@ export default function Terminal({ wsUrl }: TerminalProps) {
       };
 
       // Handle resize
-      const observer = new ResizeObserver(() => {
-        fitAddon.fit();
+      const resizeObserver = new ResizeObserver(() => {
+        try {
+          fitAddon.fit();
+        } catch {
+          // ignore fit errors during disposal
+        }
       });
       if (terminalRef.current) {
-        observer.observe(terminalRef.current);
+        resizeObserver.observe(terminalRef.current);
       }
 
       return () => {
-        observer.disconnect();
+        resizeObserver.disconnect();
         ws.close();
         terminal.dispose();
       };
     };
 
-    initTerminal();
+    let cleanup: (() => void) | undefined;
+    initTerminal().then((fn) => {
+      cleanup = fn;
+    });
 
     return () => {
+      disposed = true;
+      if (cleanup) cleanup();
       if (xtermRef.current) {
         xtermRef.current.dispose();
+        xtermRef.current = null;
       }
     };
   }, [wsUrl]);
 
   return (
     <div className="h-full">
-      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css" />
+      <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css"
+      />
       <div ref={terminalRef} className="h-full w-full" />
     </div>
   );

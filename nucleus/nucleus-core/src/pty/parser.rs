@@ -85,7 +85,7 @@ pub fn parse_command(raw: &str) -> ParsedCommand {
     let raw = raw.trim().to_string();
     let mut env_assignments: HashMap<String, String> = HashMap::new();
     let mut redirections: Vec<Redirection> = Vec::new();
-    let mut is_background = raw.ends_with('&') && !raw.ends_with("&&");
+    let is_background = raw.ends_with('&') && !raw.ends_with("&&");
     let is_chained = raw.contains("&&") || raw.contains("||") || raw.contains(';');
 
     let work = if is_background {
@@ -335,7 +335,7 @@ fn parse_tokens(tokens: &[String]) -> (PipeSegment, Vec<Redirection>) {
 fn classify_command(
     binary: &str,
     args: &[String],
-    flags: &[String],
+    _flags: &[String],
     env_assignments: &HashMap<String, String>,
 ) -> CommandCategory {
     let bin = binary
