@@ -1,0 +1,88 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #000000;
+  --surface: #0a0a0a;
+  --panel: #111111;
+  --border: #1a1a1a;
+  --accent: #00ff88;
+  --text: #e8e8e8;
+  --muted: #666666;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Syne', sans-serif;
+}
+
+code, pre, .font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+.risk-none { color: var(--muted); }
+.risk-low { color: #4ade80; }
+.risk-medium { color: #fbbf24; }
+.risk-high { color: #f97316; }
+.risk-critical { color: #ef4444; }
+
+.category-filesystem_mutation { color: #fbbf24; }
+.category-network { color: #60a5fa; }
+.category-git { color: #4ade80; }
+.category-build { color: #a78bfa; }
+.category-docker { color: #38bdf8; }
+.category-process_spawn { color: #fb923c; }
+.category-env_change { color: #c084fc; }
+.category-read_only { color: var(--muted); }
+.category-package_manager { color: #f472b6; }
+.category-unknown { color: var(--muted); }
+
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+.toast-enter {
+  animation: slideIn 0.3s ease-out;
+}
+
+.toast-exit {
+  animation: fadeOut 0.3s ease-in;
+}
