@@ -33,6 +33,7 @@ function errorContent(err: unknown): { content: Array<{ type: "text"; text: stri
 // Tools
 // ---------------------------------------------------------------------------
 
+// @ts-ignore — MCP SDK deep type instantiation with Zod schemas
 server.tool(
   "execute_command",
   "Run a shell command through Nucleus with risk evaluation, execution tracking, and rollback support",
@@ -184,6 +185,7 @@ server.tool(
   }
 );
 
+// @ts-ignore — MCP SDK deep type instantiation with Zod schemas
 server.tool(
   "get_execution_graph",
   "Get the execution dependency graph (DAG) for a session, showing how commands relate to each other",
@@ -227,6 +229,7 @@ server.tool(
   }
 );
 
+// @ts-ignore — MCP SDK deep type instantiation with Zod schemas
 server.tool(
   "run_skill",
   "Execute a Nucleus skill (a predefined automation workflow) with the given parameters",
@@ -325,6 +328,7 @@ server.tool(
   }
 );
 
+// @ts-ignore — MCP SDK deep type instantiation with Zod schemas
 server.tool(
   "create_session",
   "Create a new Nucleus session for grouping related command executions together",
