@@ -1,0 +1,29 @@
+[package]
+name = "nucleus-core"
+version = "1.0.0"
+edition = "2021"
+description = "NUCLEUS — AI-native shell runtime core"
+
+[[bin]]
+name = "nucleus"
+path = "src/main.rs"
+
+[dependencies]
+portable-pty = "0.8"
+uuid = { version = "1", features = ["v4", "serde"] }
+sled = "0.34"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = { version = "0.4", features = ["serde"] }
+redis = { version = "0.24", features = ["tokio-comp"] }
+tokio = { version = "1", features = ["full"] }
+nix = { version = "0.27", features = ["process", "signal", "fs"] }
+regex = "1"
+glob = "0.3"
+dirs = "5"
+sha2 = "0.10"
+crossbeam-channel = "0.5"
+log = "0.4"
+env_logger = "0.10"
+ctrlc = "3"
+libc = "0.2"
