@@ -9,6 +9,7 @@ const navItems = [
   { href: '/graph', label: 'Execution Graph', icon: '◈' },
   { href: '/sessions', label: 'Sessions', icon: '◉' },
   { href: '/context', label: 'Environment', icon: '◎' },
+  { href: '/agent', label: 'Agent', icon: '◆' },
   { href: '/api-explorer', label: 'API Explorer', icon: '⬢' },
 ];
 

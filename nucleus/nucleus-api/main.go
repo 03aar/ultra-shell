@@ -104,6 +104,25 @@ func main() {
 		v1.POST("/sessions", handlers.CreateSession)
 		v1.GET("/sessions/:id/replay", handlers.GetSessionReplay)
 
+		// Agent
+		v1.POST("/agent/execute", handlers.AgentExecute)
+		v1.POST("/agent/plan", handlers.AgentPlan)
+
+		// Skills
+		v1.GET("/skills", handlers.GetSkills)
+		v1.GET("/skills/:name", handlers.GetSkill)
+		v1.POST("/skills/:name/run", handlers.RunSkill)
+
+		// Context environment
+		v1.GET("/context/environment", handlers.GetContext)
+
+		// Rollback preview
+		v1.GET("/rollback/:execution_id/preview", handlers.PostRollback)
+
+		// Session detail and export
+		v1.GET("/sessions/:id", handlers.GetSessionReplay)
+		v1.GET("/sessions/:id/export", handlers.GetSessionReplay)
+
 		// WebSocket
 		v1.GET("/ws/stream", handlers.WSStream)
 	}

@@ -1,0 +1,14 @@
+name: git_cleanup
+description: Clean up local git branches that have been merged into main/master
+parameters: []
+steps:
+  - command: "git fetch --prune"
+    description: Fetch latest and prune deleted remote branches
+    risk: low
+  - command: "git branch --merged main 2>/dev/null || git branch --merged master"
+    description: List branches merged into main
+    risk: low
+  - command: "git branch --merged main 2>/dev/null | grep -v 'main\\|master\\|\\*' | xargs -r git branch -d"
+    description: Delete merged branches
+    risk: medium
+    requires_confirmation: false

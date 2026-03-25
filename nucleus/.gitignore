@@ -5,12 +5,21 @@ nucleus-core/Cargo.lock
 # Go
 nucleus-api/nucleus-api
 nucleus-api/go.sum
+nucleus-cli/nuc
+nucleus-cli/go.sum
 
 # Node.js / Next.js
-nucleus-dashboard/node_modules/
+**/node_modules/
 nucleus-dashboard/.next/
 nucleus-dashboard/out/
-nucleus-dashboard/.env.local
+nucleus-mcp/dist/
+
+# Python
+**/__pycache__/
+**/*.pyc
+*.egg-info/
+.venv/
+venv/
 
 # Build output
 build/

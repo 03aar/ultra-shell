@@ -1,0 +1,20 @@
+name: docker_cleanup
+description: Remove stopped containers, unused images, volumes, and networks
+parameters:
+  - name: aggressive
+    type: boolean
+    required: false
+    default: "false"
+steps:
+  - command: "docker container prune -f"
+    description: Remove stopped containers
+    risk: low
+  - command: "docker image prune -f"
+    description: Remove dangling images
+    risk: low
+    condition: "aggressive == false"
+  - command: "docker system prune -a -f --volumes"
+    description: Full system prune including all unused images and volumes
+    risk: high
+    requires_confirmation: true
+    condition: "aggressive == true"
