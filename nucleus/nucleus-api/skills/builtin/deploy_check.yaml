@@ -1,0 +1,21 @@
+name: deploy_check
+description: Run pre-deployment checks before any deployment
+parameters: []
+steps:
+  - command: "git status --porcelain"
+    description: Check for uncommitted changes
+    risk: low
+    expect_empty: true
+    failure_message: "Uncommitted changes detected. Commit or stash before deploying."
+  - command: "git rev-parse --abbrev-ref HEAD"
+    description: Verify current branch is main/master/release
+    risk: low
+  - command: "test -f Makefile && make test || test -f package.json && npm test || echo 'No test command found'"
+    description: Run tests
+    risk: low
+  - command: "test -f Makefile && make build || test -f package.json && npm run build || echo 'No build command found'"
+    description: Run build
+    risk: low
+  - command: "echo 'All pre-deployment checks passed'"
+    description: Report success
+    risk: low

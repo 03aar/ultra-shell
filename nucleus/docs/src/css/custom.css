@@ -1,0 +1,205 @@
+/* Nucleus Dark Theme */
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Syne:wght@400;500;600;700;800&display=swap');
+
+:root,
+[data-theme='dark'] {
+  /* Primary palette */
+  --ifm-color-primary: #00ff88;
+  --ifm-color-primary-dark: #00e67a;
+  --ifm-color-primary-darker: #00d973;
+  --ifm-color-primary-darkest: #00b35f;
+  --ifm-color-primary-light: #1aff94;
+  --ifm-color-primary-lighter: #33ff9f;
+  --ifm-color-primary-lightest: #66ffb8;
+
+  /* Background */
+  --ifm-background-color: #000000;
+  --ifm-background-surface-color: #0a0a0a;
+
+  /* Navbar */
+  --ifm-navbar-background-color: #000000;
+  --ifm-navbar-shadow: 0 1px 0 rgba(0, 255, 136, 0.1);
+
+  /* Footer */
+  --ifm-footer-background-color: #050505;
+  --ifm-footer-color: #888;
+  --ifm-footer-link-color: #ccc;
+  --ifm-footer-title-color: #00ff88;
+
+  /* Typography */
+  --ifm-font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    Oxygen, Ubuntu, sans-serif;
+  --ifm-heading-font-family: 'Syne', -apple-system, BlinkMacSystemFont,
+    'Segoe UI', sans-serif;
+  --ifm-font-family-monospace: 'JetBrains Mono', 'Fira Code', 'Cascadia Code',
+    monospace;
+
+  /* Code blocks */
+  --ifm-code-font-size: 90%;
+  --ifm-code-background: #0d0d0d;
+  --ifm-code-border-radius: 6px;
+  --prism-background-color: #0d0d0d;
+
+  /* Links */
+  --ifm-link-color: #00ff88;
+  --ifm-link-hover-color: #66ffb8;
+
+  /* Borders */
+  --ifm-toc-border-color: #1a1a1a;
+  --ifm-hr-border-color: #1a1a1a;
+
+  /* Cards */
+  --ifm-card-background-color: #0a0a0a;
+
+  /* Sidebar */
+  --doc-sidebar-width: 280px;
+}
+
+/* Headings */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--ifm-heading-font-family);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+h1 {
+  font-weight: 800;
+}
+
+/* Code blocks */
+code {
+  font-family: var(--ifm-font-family-monospace);
+  border: 1px solid #1a1a1a;
+}
+
+pre code {
+  border: none;
+}
+
+.prism-code {
+  background-color: #0d0d0d !important;
+  border: 1px solid #1a1a1a;
+  border-radius: 8px;
+}
+
+/* Navbar styling */
+.navbar {
+  border-bottom: 1px solid #1a1a1a;
+}
+
+.navbar__title {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 1.25rem;
+  letter-spacing: -0.03em;
+}
+
+.navbar__link {
+  font-weight: 500;
+}
+
+.navbar__link:hover,
+.navbar__link--active {
+  color: #00ff88;
+}
+
+/* Sidebar */
+.menu__link {
+  font-size: 0.9rem;
+  border-radius: 6px;
+}
+
+.menu__link--active:not(.menu__link--sublist) {
+  background-color: rgba(0, 255, 136, 0.08);
+  color: #00ff88;
+}
+
+.menu__link:hover {
+  background-color: rgba(0, 255, 136, 0.05);
+  color: #00ff88;
+}
+
+.theme-doc-sidebar-menu .menu__list-item-collapsible:hover {
+  background-color: rgba(0, 255, 136, 0.03);
+}
+
+/* TOC */
+.table-of-contents__link:hover,
+.table-of-contents__link--active {
+  color: #00ff88;
+}
+
+/* Tables */
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+table th {
+  background-color: #0a0a0a;
+  border-bottom: 2px solid #00ff88;
+  font-family: var(--ifm-heading-font-family);
+  font-weight: 600;
+}
+
+table td {
+  border-bottom: 1px solid #1a1a1a;
+}
+
+table tr:hover td {
+  background-color: rgba(0, 255, 136, 0.03);
+}
+
+/* Admonitions */
+.alert {
+  border-radius: 8px;
+  border-left-width: 4px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #000;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #222;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #00ff88;
+}
+
+/* Selection */
+::selection {
+  background-color: rgba(0, 255, 136, 0.3);
+  color: #fff;
+}
+
+/* Footer */
+.footer {
+  border-top: 1px solid #1a1a1a;
+}
+
+.footer__title {
+  font-family: var(--ifm-heading-font-family);
+  font-weight: 700;
+}
+
+/* Pill badges for command categories */
+.badge--primary {
+  background-color: rgba(0, 255, 136, 0.15);
+  color: #00ff88;
+  border: 1px solid rgba(0, 255, 136, 0.3);
+}

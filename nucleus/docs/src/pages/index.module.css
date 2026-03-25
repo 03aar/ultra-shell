@@ -1,0 +1,217 @@
+/* Hero */
+.hero {
+  padding: 6rem 0 4rem;
+  text-align: center;
+  background: radial-gradient(ellipse at 50% 0%, rgba(0, 255, 136, 0.08) 0%, transparent 60%);
+}
+
+.heroTitle {
+  font-size: 4.5rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: #fff;
+  margin-bottom: 0.5rem;
+}
+
+.heroTagline {
+  font-size: 1.5rem;
+  color: #00ff88;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.heroDescription {
+  font-size: 1.15rem;
+  color: #999;
+  max-width: 640px;
+  margin: 0 auto 2rem;
+  line-height: 1.7;
+}
+
+.heroActions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-bottom: 2.5rem;
+}
+
+.primaryButton {
+  background: #00ff88;
+  color: #000;
+  padding: 0.75rem 2rem;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 1rem;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.primaryButton:hover {
+  background: #33ff9f;
+  color: #000;
+  text-decoration: none;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(0, 255, 136, 0.3);
+}
+
+.secondaryButton {
+  background: transparent;
+  color: #ccc;
+  padding: 0.75rem 2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1rem;
+  text-decoration: none;
+  border: 1px solid #333;
+  transition: all 0.2s;
+}
+
+.secondaryButton:hover {
+  color: #00ff88;
+  border-color: #00ff88;
+  text-decoration: none;
+}
+
+.installBlock {
+  display: inline-block;
+  background: #0d0d0d;
+  border: 1px solid #1a1a1a;
+  border-radius: 8px;
+  padding: 0.75rem 1.5rem;
+}
+
+.installBlock code {
+  font-family: 'JetBrains Mono', monospace;
+  color: #00ff88;
+  font-size: 0.95rem;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+/* Features */
+.features {
+  padding: 5rem 0;
+}
+
+.sectionTitle {
+  text-align: center;
+  font-size: 2.5rem;
+  margin-bottom: 3rem;
+  color: #fff;
+}
+
+.featureGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+
+@media (max-width: 996px) {
+  .featureGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .featureGrid {
+    grid-template-columns: 1fr;
+  }
+  .heroTitle {
+    font-size: 2.5rem;
+  }
+}
+
+.featureCard {
+  background: #0a0a0a;
+  border: 1px solid #1a1a1a;
+  border-radius: 12px;
+  padding: 2rem;
+  transition: border-color 0.2s;
+}
+
+.featureCard:hover {
+  border-color: rgba(0, 255, 136, 0.3);
+}
+
+.featureCard h3 {
+  color: #fff;
+  margin-bottom: 0.5rem;
+}
+
+.featureCard p {
+  color: #888;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.featureIcon {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #00ff88;
+  background: rgba(0, 255, 136, 0.08);
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  margin-bottom: 1rem;
+  border: 1px solid rgba(0, 255, 136, 0.15);
+}
+
+/* Architecture */
+.architecture {
+  padding: 5rem 0;
+  border-top: 1px solid #1a1a1a;
+}
+
+.layerGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .layerGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.layer {
+  background: #0a0a0a;
+  border: 1px solid #1a1a1a;
+  border-radius: 12px;
+  padding: 2rem;
+}
+
+.layer h3 {
+  color: #fff;
+  font-family: 'JetBrains Mono', monospace;
+  margin-bottom: 0.25rem;
+}
+
+.layer p {
+  color: #888;
+  line-height: 1.6;
+}
+
+.layerTag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #00ff88;
+  background: rgba(0, 255, 136, 0.1);
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  display: inline-block;
+  margin-bottom: 0.75rem;
+}
+
+.layerLang {
+  font-size: 0.85rem;
+  color: #555;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}

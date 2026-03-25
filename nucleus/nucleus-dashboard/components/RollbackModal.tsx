@@ -21,8 +21,8 @@ export default function RollbackModal({ execution, onClose, onRollbackComplete }
       if (res.success) {
         setTimeout(onRollbackComplete, 1500);
       }
-    } catch (e: any) {
-      setResult({ success: false, message: e.message || 'Rollback failed' });
+    } catch (e: unknown) {
+      setResult({ success: false, message: e instanceof Error ? e.message : 'Rollback failed' });
     } finally {
       setLoading(false);
     }

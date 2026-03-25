@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// RollbackHandler stores reference to Redis subscriber for broadcasting
+// RollbackBroadcast is set by main to broadcast rollback events
 var RollbackBroadcast func(msgType string, data interface{})
 
 func PostRollback(c *gin.Context) {
@@ -62,7 +62,6 @@ func PostRollback(c *gin.Context) {
 		Message:       "Rollback successful",
 	}
 
-	// Broadcast rollback event
 	if RollbackBroadcast != nil {
 		RollbackBroadcast("rollback_complete", map[string]interface{}{
 			"execution_id":   executionID,

@@ -190,7 +190,7 @@ impl RiskEvaluator {
         }
 
         // SQL DROP
-        if (bin == "psql" || bin == "mysql" || bin == "sqlite3") {
+        if bin == "psql" || bin == "mysql" || bin == "sqlite3" {
             let full = cmd.raw.to_uppercase();
             if full.contains("DROP") {
                 assessment.flags.push(RiskFlag {

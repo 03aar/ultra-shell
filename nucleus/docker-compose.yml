@@ -1,4 +1,4 @@
-version: '3.8'
+version: '3.9'
 
 services:
   postgres:
@@ -6,12 +6,12 @@ services:
     environment:
       POSTGRES_DB: nucleus
       POSTGRES_USER: nucleus
-      POSTGRES_PASSWORD: nucleus_dev_password
+      POSTGRES_PASSWORD: nucleus
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./nucleus-api/database/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U nucleus"]
       interval: 5s
@@ -22,6 +22,8 @@ services:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    volumes:
+      - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -43,8 +45,6 @@ services:
         condition: service_healthy
     stdin_open: true
     tty: true
-    ports:
-      - "9090:9090"
 
   nucleus-api:
     build:
@@ -52,8 +52,13 @@ services:
       dockerfile: Dockerfile
     environment:
       NUCLEUS_REDIS_URL: redis://redis:6379
-      DATABASE_URL: postgres://nucleus:nucleus_dev_password@postgres:5432/nucleus?sslmode=disable
+      DATABASE_URL: postgres://nucleus:nucleus@postgres:5432/nucleus?sslmode=disable
       PORT: "8080"
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      OLLAMA_HOST: ${OLLAMA_HOST:-}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-}
     ports:
       - "8080:8080"
     depends_on:
@@ -65,12 +70,28 @@ services:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
       interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 5
+      start_period: 15s
+
+  nucleus-mcp:
+    build:
+      context: ./nucleus-mcp
+      dockerfile: Dockerfile
+    environment:
+      NUCLEUS_API_URL: http://nucleus-api:8080
+      NUCLEUS_API_KEY: dev-nucleus-key-local
+    depends_on:
+      nucleus-api:
+        condition: service_healthy
 
   nucleus-dashboard:
     build:
       context: ./nucleus-dashboard
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8080/api/v1
+        NEXT_PUBLIC_WS_URL: ws://localhost:8080/api/v1
+        NEXT_PUBLIC_API_KEY: dev-nucleus-key-local
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8080/api/v1
       NEXT_PUBLIC_WS_URL: ws://localhost:8080/api/v1
@@ -81,6 +102,21 @@ services:
       nucleus-api:
         condition: service_healthy
 
+  nucleus-orchestrator:
+    build:
+      context: ./nucleus-orchestrator
+      dockerfile: Dockerfile
+    environment:
+      NUCLEUS_API_URL: http://nucleus-api:8080/api/v1
+      NUCLEUS_API_KEY: dev-nucleus-key-local
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+    depends_on:
+      nucleus-api:
+        condition: service_healthy
+
 volumes:
   postgres_data:
+  redis_data:
   nucleus_data:

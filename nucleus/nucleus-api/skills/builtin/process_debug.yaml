@@ -1,0 +1,23 @@
+name: process_debug
+description: Debug a running or crashed process by gathering diagnostics
+parameters:
+  - name: pid_or_name
+    type: string
+    required: true
+    description: Process ID or name to debug
+steps:
+  - command: "ps aux | grep -i {pid_or_name} | grep -v grep || echo 'Process not found in ps'"
+    description: Find process info
+    risk: low
+  - command: "lsof -p $(pgrep -f {pid_or_name} | head -1) 2>/dev/null | head -30 || echo 'Could not list open files'"
+    description: Show open files and network connections
+    risk: low
+  - command: "ls -lt /var/log/ 2>/dev/null | head -10 || echo 'No /var/log access'"
+    description: Check recent log files
+    risk: low
+  - command: "journalctl -u {pid_or_name} --no-pager -n 20 2>/dev/null || docker logs {pid_or_name} --tail 20 2>/dev/null || echo 'No logs found via journalctl or docker'"
+    description: Show recent logs
+    risk: low
+  - command: "top -b -n 1 | grep -i {pid_or_name} || echo 'Process not found in top'"
+    description: Show current resource usage
+    risk: low

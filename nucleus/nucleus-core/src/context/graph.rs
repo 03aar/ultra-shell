@@ -5,7 +5,6 @@ use serde::{Deserialize, Serialize};
 use sled::Db;
 use std::collections::HashMap;
 use std::path::PathBuf;
-use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExecutionNode {

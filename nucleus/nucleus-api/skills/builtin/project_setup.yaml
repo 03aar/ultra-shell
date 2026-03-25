@@ -1,0 +1,36 @@
+name: project_setup
+description: Set up a new project directory with standard structure
+parameters:
+  - name: project_name
+    type: string
+    required: true
+  - name: type
+    type: string
+    required: true
+    description: "One of: node, python, rust, go"
+steps:
+  - command: "mkdir -p {project_name} && cd {project_name}"
+    description: Create project directory
+    risk: low
+  - command: "cd {project_name} && git init"
+    description: Initialize git repository
+    risk: low
+  - command: "cd {project_name} && npm init -y && mkdir -p src tests"
+    description: Initialize Node.js project
+    risk: low
+    condition: "type == node"
+  - command: "cd {project_name} && python -m venv venv && mkdir -p src tests"
+    description: Initialize Python project with virtualenv
+    risk: low
+    condition: "type == python"
+  - command: "cd {project_name} && cargo init"
+    description: Initialize Rust project
+    risk: low
+    condition: "type == rust"
+  - command: "cd {project_name} && go mod init {project_name} && mkdir -p cmd internal"
+    description: Initialize Go project
+    risk: low
+    condition: "type == go"
+  - command: "cd {project_name} && echo '# {project_name}' > README.md"
+    description: Create README
+    risk: low

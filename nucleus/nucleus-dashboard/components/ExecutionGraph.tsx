@@ -99,7 +99,7 @@ export default function ExecutionGraph({ sessionId, onNodeClick }: ExecutionGrap
     return () => clearInterval(interval);
   }, [fetchGraph]);
 
-  const handleNodeClick = useCallback((_: any, node: Node) => {
+  const handleNodeClick = useCallback((_: React.MouseEvent, node: Node) => {
     if (node.data.execution && onNodeClick) {
       onNodeClick(node.data.execution);
     }

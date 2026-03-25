@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "nucleus": {
+      "command": "node",
+      "args": ["/path/to/nucleus-mcp/dist/index.js"],
+      "env": {
+        "NUCLEUS_API_URL": "http://localhost:8080",
+        "NUCLEUS_API_KEY": "dev-nucleus-key-local",
+        "NUCLEUS_MCP_LOG_LEVEL": "info"
+      }
+    }
+  }
+}

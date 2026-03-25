@@ -1,0 +1,16 @@
+name: env_audit
+description: Audit environment variables for exposed secrets and security issues
+parameters: []
+steps:
+  - command: "env | grep -iE '(aws_|gcp_|google_|github_|stripe_|slack_|database_url|db_pass|api_key|secret|token|private)' | sed 's/=.*/=***REDACTED***/' || echo 'No sensitive variables detected'"
+    description: Scan for potentially sensitive environment variables
+    risk: low
+  - command: "find . -maxdepth 2 -name '.env*' -not -name '.env.example' -not -name '.env.local.example' 2>/dev/null | head -20 || echo 'No .env files found'"
+    description: Check for .env files that might contain secrets
+    risk: low
+  - command: "git ls-files --error-unmatch .env 2>/dev/null && echo 'WARNING: .env is tracked by git!' || echo 'OK: .env is not tracked by git'"
+    description: Verify .env is not committed to git
+    risk: low
+  - command: "cat .gitignore 2>/dev/null | grep -q '.env' && echo 'OK: .env in .gitignore' || echo 'WARNING: .env not in .gitignore'"
+    description: Verify .gitignore includes .env
+    risk: low

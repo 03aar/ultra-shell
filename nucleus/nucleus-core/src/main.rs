@@ -1,5 +1,7 @@
+mod annotations;
 mod context;
 mod ipc;
+mod natural;
 mod pty;
 mod rollback;
 

@@ -118,17 +118,17 @@ func GetExecutionContext(c *gin.Context) {
 	executionsMu.RLock()
 	defer executionsMu.RUnlock()
 
-	var found *models.ExecutionNode
-	var foundIdx int
+	var foundCopy models.ExecutionNode
+	var foundIdx int = -1
 	for i, exec := range executions {
 		if exec.ID == id {
-			found = &executions[i]
+			foundCopy = exec // copy value, not pointer
 			foundIdx = i
 			break
 		}
 	}
 
-	if found == nil {
+	if foundIdx == -1 {
 		errMsg := "Execution not found"
 		c.JSON(http.StatusNotFound, models.APIResponse{
 			Data:  nil,
@@ -146,21 +146,25 @@ func GetExecutionContext(c *gin.Context) {
 		}
 	}
 
-	// Get 5 most recent prior executions
+	// Get 5 most recent prior executions (safe bounds)
 	priorStart := foundIdx - 5
 	if priorStart < 0 {
 		priorStart = 0
 	}
-	recentPrior := executions[priorStart:foundIdx]
+	if foundIdx > len(executions) {
+		foundIdx = len(executions)
+	}
+	recentPrior := make([]models.ExecutionNode, len(executions[priorStart:foundIdx]))
+	copy(recentPrior, executions[priorStart:foundIdx])
 
 	resp := models.ExecutionContextResponse{
-		Execution:         *found,
+		Execution:         foundCopy,
 		Edges:             relatedEdges,
 		RecentPrior:       recentPrior,
 		EnvDiffSinceStart: make(map[string]string),
 	}
 
-	respondSuccess(c, resp, found.SessionID)
+	respondSuccess(c, resp, foundCopy.SessionID)
 }
 
 func respondSuccess(c *gin.Context, data interface{}, sessionID string) {
