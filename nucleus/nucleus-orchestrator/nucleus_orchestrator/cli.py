@@ -24,20 +24,38 @@ console = Console()
 
 
 def _resolve_provider(provider_name: str, model: str | None = None):
-    """Instantiate the requested LLM provider."""
+    """Instantiate the requested LLM provider.
+
+    Supported providers:
+      - claude / anthropic  (requires ANTHROPIC_API_KEY)
+      - openai / gpt        (requires OPENAI_API_KEY)
+      - gemini / google     (requires GOOGLE_API_KEY)
+      - ollama              (requires local Ollama server, no API key)
+    """
+    import os
     from nucleus_orchestrator.providers.claude import ClaudeProvider
+    from nucleus_orchestrator.providers.gemini import GeminiProvider
     from nucleus_orchestrator.providers.ollama import OllamaProvider
     from nucleus_orchestrator.providers.openai_provider import OpenAIProvider
 
     name = provider_name.lower()
     if name in ("claude", "anthropic"):
+        if not os.environ.get("ANTHROPIC_API_KEY"):
+            console.print("[yellow]Warning: ANTHROPIC_API_KEY not set. Set it in .env or environment.[/yellow]")
         return ClaudeProvider(model=model or "claude-sonnet-4-5-20250514")
     elif name in ("openai", "gpt"):
+        if not os.environ.get("OPENAI_API_KEY"):
+            console.print("[yellow]Warning: OPENAI_API_KEY not set. Set it in .env or environment.[/yellow]")
         return OpenAIProvider(model=model or "gpt-4o")
+    elif name in ("gemini", "google"):
+        if not os.environ.get("GOOGLE_API_KEY"):
+            console.print("[yellow]Warning: GOOGLE_API_KEY not set. Set it in .env or environment.[/yellow]")
+        return GeminiProvider(model=model or "gemini-2.0-flash")
     elif name == "ollama":
         return OllamaProvider(model=model or "llama3")
     else:
         console.print(f"[red]Unknown provider: {provider_name}[/red]")
+        console.print("[dim]Available: claude, openai, gemini, ollama[/dim]")
         raise typer.Exit(1)
 
 

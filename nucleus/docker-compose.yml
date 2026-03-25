@@ -54,6 +54,11 @@ services:
       NUCLEUS_REDIS_URL: redis://redis:6379
       DATABASE_URL: postgres://nucleus:nucleus@postgres:5432/nucleus?sslmode=disable
       PORT: "8080"
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      OLLAMA_HOST: ${OLLAMA_HOST:-}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-}
     ports:
       - "8080:8080"
     depends_on:
